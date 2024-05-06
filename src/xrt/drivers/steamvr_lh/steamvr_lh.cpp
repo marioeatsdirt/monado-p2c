@@ -32,6 +32,9 @@
 
 #include "math/m_api.h"
 
+extern "C"{
+#include "fixup/fixup.h"
+}
 namespace {
 
 DEBUG_GET_ONCE_LOG_OPTION(lh_log, "LIGHTHOUSE_LOG", U_LOGGING_INFO)
@@ -743,6 +746,12 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
                           struct xrt_space_overseer **out_xso)
 {
 	u_logging_level level = debug_get_log_option_lh_log();
+
+	// some devices get reset during init, so that should be completed before the lighthouse driver gets loaded
+	struct fixup_context* fixup_ctx;
+	fixup_ctx = fixup_init_devices();
+
+
 	// The driver likes to create a bunch of transient folder - lets make sure they're created where they normally
 	// are.
 	std::filesystem::current_path(STEAM_INSTALL_DIR + "/config/lighthouse");
@@ -845,6 +854,9 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
 			xsysd->xdevs[xsysd->xdev_count++] = svrs->ctx->controller[i];
 		}
 	}
+
+	fixup_patch_devices(fixup_ctx, xsysd);
+	//head = xsysd->static_roles.head;	// seems to work without
 
 	u_device_assign_xdev_roles(xsysd->xdevs, xsysd->xdev_count, &svrs->head_index, &svrs->left_index,
 	                           &svrs->right_index);
