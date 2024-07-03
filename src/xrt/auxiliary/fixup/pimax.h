@@ -35,10 +35,14 @@ struct pimax_model_funcs{
     pimax_display_get_props_func_t get_display_properties;
 };
 
+struct pimax_mesh_info;
+
 struct pimax_model_config{
     const wchar_t product_name[PIMAX_MODEL_NAME_LENGTH];    // the name in the USB descriptor
     const char display_name[PIMAX_MODEL_NAME_LENGTH];   // the name for the xdev
     struct pimax_model_funcs funcs;
+    const struct pimax_mesh_info* meshes;
+    const size_t meshes_count;
 };
 
 struct pimax_device{
@@ -46,6 +50,8 @@ struct pimax_device{
     struct fixup_device base;   // must be the first member
 
     struct pimax_model_funcs* model_funcs;
+    struct pimax_mesh_info* meshes;
+    size_t meshes_count;
 
     hid_device* hid_dev;
     struct os_mutex hid_mutex;

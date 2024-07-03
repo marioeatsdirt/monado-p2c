@@ -6,6 +6,7 @@ add_library(
 	pimax_projection.cpp
 	vp2.c
 	pimax_meshes.generated.c
+	pimax_meshes.generated.bones.c
 	)
 target_link_libraries(
 	aux_fixup

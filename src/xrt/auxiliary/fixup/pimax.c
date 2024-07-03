@@ -15,6 +15,7 @@
 #include "pimax_projection.h"
 
 #include "pimax_meshes.generated.h"
+#include "pimax_meshes.generated.bones.h"
 
 #define OFFSETS_MIN -0.15
 #define OFFSETS_MAX 0.15
@@ -32,10 +33,10 @@ void pimax_5ks_get_display_props(struct pimax_device* dev, struct pimax_display_
 
 
 struct pimax_model_config model_configs[] = {
-    {L"Pimax P2EA", "Pimax 8K Plus", {pimax_5ks_get_display_props}},
-    {L"Pimax P2A", "Pimax 5K Super", {pimax_5ks_get_display_props}},
-    {L"Pimax P2C", "Pimax 5K Super", {pimax_5ks_get_display_props}},
-    {L"Pimax P2N", "Pimax 8KX", {pimax_8kx_get_display_props}}
+    {L"Pimax P2EA", "Pimax 8K Plus", {pimax_5ks_get_display_props}, pimax_distortion_meshes_bones, PIMAX_MESH_COUNT_BONES},
+    {L"Pimax P2A", "Pimax 5K Super", {pimax_5ks_get_display_props}, pimax_distortion_meshes_bones, PIMAX_MESH_COUNT_BONES},
+    {L"Pimax P2C", "Pimax 5K Super", {pimax_5ks_get_display_props}, pimax_distortion_meshes_bones, PIMAX_MESH_COUNT_BONES},
+    {L"Pimax P2N", "Pimax 8KX", {pimax_8kx_get_display_props}, pimax_distortion_meshes, PIMAX_MESH_COUNT},
 };
 
 
@@ -167,11 +168,11 @@ void pimax_update_fovs_from_mesh(struct pimax_device* dev){
         int lower_mesh_idx = -1;
         int upper_mesh_idx = -1;
         // this assumes the entries are sorted with ascending lens separation
-        for(int i = PIMAX_MESH_COUNT - 1; i >= 0; i--){
-            if(pimax_distortion_meshes[i].ipd < seperation){
+        for(int i = dev->meshes_count - 1; i >= 0; i--){
+            if(dev->meshes[i].ipd < seperation){
                 upper_mesh_idx = i;
                 if(i == 0){
-                    if(PIMAX_MESH_COUNT > 1)
+                    if(dev->meshes_count > 1)
                         upper_mesh_idx = 1;
                     lower_mesh_idx = 0;
                 } else {
@@ -181,15 +182,15 @@ void pimax_update_fovs_from_mesh(struct pimax_device* dev){
             }
         }
         if(lower_mesh_idx == -1 || upper_mesh_idx == -1){
-            lower_mesh_idx = upper_mesh_idx = PIMAX_MESH_COUNT - 1;
-            if(PIMAX_MESH_COUNT > 1)
+            lower_mesh_idx = upper_mesh_idx = dev->meshes_count - 1;
+            if(dev->meshes_count > 1)
                 lower_mesh_idx--;
         }    
-        float range = pimax_distortion_meshes[upper_mesh_idx].ipd - pimax_distortion_meshes[lower_mesh_idx].ipd;
-        float amount = (seperation - pimax_distortion_meshes[upper_mesh_idx].ipd) / range;
+        float range = dev->meshes[upper_mesh_idx].ipd - dev->meshes[lower_mesh_idx].ipd;
+        float amount = (seperation - dev->meshes[upper_mesh_idx].ipd) / range;
 
-        fov_lower = *(struct xrt_fov*)pimax_distortion_meshes[lower_mesh_idx].fovs[i];
-        fov_upper = *(struct xrt_fov*)pimax_distortion_meshes[upper_mesh_idx].fovs[i];
+        fov_lower = *(struct xrt_fov*)dev->meshes[lower_mesh_idx].fovs[i];
+        fov_upper = *(struct xrt_fov*)dev->meshes[upper_mesh_idx].fovs[i];
         dev->base.base.hmd->distortion.fov[i].angle_up = math_lerp(fov_lower.angle_up, fov_upper.angle_up, amount);
         dev->base.base.hmd->distortion.fov[i].angle_down = math_lerp(fov_lower.angle_down, fov_upper.angle_down, amount);
         dev->base.base.hmd->distortion.fov[i].angle_left = math_lerp(fov_lower.angle_left, fov_upper.angle_left, amount);
@@ -242,12 +243,12 @@ bool pimax_compute_distortion_from_mesh(
     int lower_mesh_idx = -1;
     int upper_mesh_idx = -1;
     // this assumes the entries are sorted with ascending lens separation
-    for(int i = PIMAX_MESH_COUNT - 1; i >= 0; i--){
+    for(int i = dev->meshes_count - 1; i >= 0; i--){
         //U_LOG_D("Mesh %d: %f (%f)", i, pimax_distortion_meshes[i].ipd, seperation);
-        if(pimax_distortion_meshes[i].ipd < seperation){
+        if(dev->meshes[i].ipd < seperation){
             upper_mesh_idx = i;
             if(i == 0){
-                if(PIMAX_MESH_COUNT > 1)
+                if(dev->meshes_count > 1)
                     upper_mesh_idx = 1;
                 lower_mesh_idx = 0;
             } else {
@@ -259,12 +260,12 @@ bool pimax_compute_distortion_from_mesh(
     if(lower_mesh_idx == -1 || upper_mesh_idx == -1){
         //U_LOG_E("Could not find a distortion mesh for lens separation %fmm\n", dev->device_config.separation);
         //return false;
-        lower_mesh_idx = upper_mesh_idx = PIMAX_MESH_COUNT - 1;
-        if(PIMAX_MESH_COUNT > 1)
+        lower_mesh_idx = upper_mesh_idx = dev->meshes_count - 1;
+        if(dev->meshes_count > 1)
             lower_mesh_idx--;
     }
 
-    float range = pimax_distortion_meshes[upper_mesh_idx].ipd - pimax_distortion_meshes[lower_mesh_idx].ipd;
+    float range = dev->meshes[upper_mesh_idx].ipd - dev->meshes[lower_mesh_idx].ipd;
     struct xrt_vec2 pos = {u, v};
 
     int mesh_steps_u = 65;
@@ -287,22 +288,22 @@ bool pimax_compute_distortion_from_mesh(
 
         int mesh_idx = i ? upper_mesh_idx : lower_mesh_idx;
 
-        struct xrt_vec2 vec_ulvl = *(struct xrt_vec2*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_ulvl * stride_in_floats]);
-        struct xrt_vec2 vec_uuvl = *(struct xrt_vec2*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_uuvl * stride_in_floats]);
-        struct xrt_vec2 vec_ulvu = *(struct xrt_vec2*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_ulvu * stride_in_floats]);
-        struct xrt_vec2 vec_uuvu = *(struct xrt_vec2*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_uuvu * stride_in_floats]);
+        struct xrt_vec2 vec_ulvl = *(struct xrt_vec2*)(&dev->meshes[mesh_idx].mesh[idx_ulvl * stride_in_floats]);
+        struct xrt_vec2 vec_uuvl = *(struct xrt_vec2*)(&dev->meshes[mesh_idx].mesh[idx_uuvl * stride_in_floats]);
+        struct xrt_vec2 vec_ulvu = *(struct xrt_vec2*)(&dev->meshes[mesh_idx].mesh[idx_ulvu * stride_in_floats]);
+        struct xrt_vec2 vec_uuvu = *(struct xrt_vec2*)(&dev->meshes[mesh_idx].mesh[idx_uuvu * stride_in_floats]);
 
         struct xrt_uv_triplet triplet_uvl;
         struct xrt_uv_triplet triplet_uvu;
         if(u_lower == u_upper){
-            triplet_uvl = *(struct xrt_uv_triplet*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_uuvl * stride_in_floats + 2]);
-            triplet_uvu = *(struct xrt_uv_triplet*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_uuvu * stride_in_floats + 2]);
+            triplet_uvl = *(struct xrt_uv_triplet*)(&dev->meshes[mesh_idx].mesh[idx_uuvl * stride_in_floats + 2]);
+            triplet_uvu = *(struct xrt_uv_triplet*)(&dev->meshes[mesh_idx].mesh[idx_uuvu * stride_in_floats + 2]);
         } else {
 
-            struct xrt_uv_triplet triplet_ulvl = *(struct xrt_uv_triplet*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_ulvl * stride_in_floats + 2]);
-            struct xrt_uv_triplet triplet_uuvl = *(struct xrt_uv_triplet*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_uuvl * stride_in_floats + 2]);
-            struct xrt_uv_triplet triplet_ulvu = *(struct xrt_uv_triplet*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_ulvu * stride_in_floats + 2]);
-            struct xrt_uv_triplet triplet_uuvu = *(struct xrt_uv_triplet*)(&pimax_distortion_meshes[mesh_idx].mesh[idx_uuvu * stride_in_floats + 2]);
+            struct xrt_uv_triplet triplet_ulvl = *(struct xrt_uv_triplet*)(&dev->meshes[mesh_idx].mesh[idx_ulvl * stride_in_floats + 2]);
+            struct xrt_uv_triplet triplet_uuvl = *(struct xrt_uv_triplet*)(&dev->meshes[mesh_idx].mesh[idx_uuvl * stride_in_floats + 2]);
+            struct xrt_uv_triplet triplet_ulvu = *(struct xrt_uv_triplet*)(&dev->meshes[mesh_idx].mesh[idx_ulvu * stride_in_floats + 2]);
+            struct xrt_uv_triplet triplet_uuvu = *(struct xrt_uv_triplet*)(&dev->meshes[mesh_idx].mesh[idx_uuvu * stride_in_floats + 2]);
 
             // interpolate u first
             float amount = (pos.x - vec_ulvl.x) / (vec_uuvl.x - vec_ulvl.x);
@@ -321,7 +322,7 @@ bool pimax_compute_distortion_from_mesh(
     if(upper_mesh_idx == lower_mesh_idx){
         *out_result = triplets[0];    
     } else {
-        float amount = (seperation - pimax_distortion_meshes[upper_mesh_idx].ipd) / range;
+        float amount = (seperation - dev->meshes[upper_mesh_idx].ipd) / range;
         *out_result = uv_triplet_lerp(triplets[0], triplets[1], amount);
     }
 
@@ -454,6 +455,8 @@ long init_pimax8kx(struct fixup_context* ctx, struct fixup_func_list* funcs, str
     for(size_t i = 0; i < ARRAY_SIZE(model_configs); i++){
         if(wcsncmp(buf, model_configs[i].product_name, PIMAX_MODEL_NAME_LENGTH) == 0){
             dev->model_funcs = &model_configs[i].funcs;
+            dev->meshes = model_configs[i].meshes;
+            dev->meshes_count = model_configs[i].meshes_count;
             strncpy(dev->base.base.str, model_configs[i].display_name, 
                 (PIMAX_MODEL_NAME_LENGTH<XRT_DEVICE_NAME_LEN?PIMAX_MODEL_NAME_LENGTH:XRT_DEVICE_NAME_LEN)-1);
                 found_match = true;
