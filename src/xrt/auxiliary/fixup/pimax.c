@@ -107,6 +107,7 @@ void pimax_5ks_get_display_props(struct pimax_device* dev, struct pimax_display_
     out_props->size_in_meters.x = 0.10206f;
     out_props->size_in_meters.y = 0.13608f/2.f;
     out_props->nominal_frame_interval_ns = 1000.*1000.*1000./110.;
+    out_props->gap = 0.015f;
 }
 
 
