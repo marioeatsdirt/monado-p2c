@@ -97,7 +97,7 @@ init_mesh_vertex_buffers(struct vk_bundle *vk,
 	// Distortion vbo and ibo sizes.
 	VkDeviceSize vbo_size = stride * vertex_count;
 	VkDeviceSize ibo_size = sizeof(int) * index_counts;
-	U_LOG_D("init_mesh_vertex_buffers");
+
 
 	// Don't create vbo if size is zero.
 	if (vbo_size == 0) {
@@ -498,27 +498,6 @@ teardown_scratch_color_image(struct vk_bundle *vk, struct render_scratch_color_i
 	DF(Memory, rsci->device_memory);
 }
 
-bool render_update_distortion_mesh(struct xrt_device *xdev){
-
-	VkResult ret;
-
-	struct vk_bundle* vk = xdev->hmd->distortion.dist_vk_bundle;
-	uint32_t stride = xdev->hmd->distortion.mesh.stride;
-	uint32_t vertex_count = xdev->hmd->distortion.mesh.vertex_count;
-	void* vertices = xdev->hmd->distortion.mesh.vertices;
-	struct render_buffer* vbo = xdev->hmd->distortion.vbo;
-
-	// Distortion vbo and ibo sizes.
-	VkDeviceSize vbo_size = stride * vertex_count;
-
-	ret = render_buffer_write( //
-	    vk,                    // vk_bundle
-	    vbo,                   // buffer
-	    vertices,              // data
-	    vbo_size);             // size
-	VK_CHK_WITH_RET(ret, "render_buffer_write", false);
-	return true;
-}
 
 /*
  *
@@ -833,10 +812,6 @@ render_resources_init(struct render_resources *r,
 	if (!bret) {
 		return false;
 	}
-	xdev->hmd->distortion.dist_vk_bundle = vk;
-	xdev->hmd->distortion.vbo = &r->mesh.vbo;
-	xdev->hmd->dist_update = render_update_distortion_mesh;
-	U_LOG_D("Set dist_update!");
 
 	bret = init_mesh_ubo_buffers(     //
 	    vk,                           //

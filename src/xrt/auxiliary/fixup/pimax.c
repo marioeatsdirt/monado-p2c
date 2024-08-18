@@ -432,23 +432,6 @@ void pimax_8kx_poll(struct pimax_device* dev){
         U_LOG_D("Separation Set to %f", dev->device_config.separation);
         update_distortion = true;
     }
-    if(update_distortion){
-        if(dev->base.base.hmd->dist_update){
-            if(dev->base.base.hmd->distortion.mesh.vertices){
-                free(dev->base.base.hmd->distortion.mesh.vertices);
-                dev->base.base.hmd->distortion.mesh.vertices = 0;
-            }
-            if(dev->base.base.hmd->distortion.mesh.indices){
-                free(dev->base.base.hmd->distortion.mesh.indices);
-                dev->base.base.hmd->distortion.mesh.indices = 0;
-            }
-            u_distortion_mesh_fill_in_compute(&dev->base.base);
-            dev->base.base.hmd->dist_update(&dev->base.base);
-            pimax_update_fovs_from_mesh(dev);
-        } else {
-            U_LOG_D("No distortion update function!");
-        }
-    }
 
     if(dev->polls_since_last_keepalive > PIMAX_POLL_KEEPALIVE_WAIT_COUNT){
         // send keepalive
@@ -889,7 +872,6 @@ void patch_pimax8kx(struct fixup_device* fdev, struct fixup_context* ctx, struct
     // setup debug GUI
     u_var_add_root(dev, "Pimax HMD", true);
     u_var_add_ro_f32(dev, &dev->device_config.ipd, "Current IPD");
-    u_var_add_bool(dev, &dev->always_update_distortion, "Constantly update distortion mesh (performance heavy)");
     u_var_add_gui_header(dev, NULL, "Horizontal offset: ");
     u_var_add_draggable_f32(dev, &dev->device_config.offset_h_0, "Left H");
     u_var_add_draggable_f32(dev, &dev->device_config.offset_h_1, "Right H");

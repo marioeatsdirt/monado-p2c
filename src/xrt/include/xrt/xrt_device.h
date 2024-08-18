@@ -79,11 +79,6 @@ struct xrt_view
 	struct xrt_matrix_2x2 rot;
 };
 
-
-struct vk_bundle;
-struct render_buffer;
-struct xrt_device;
-
 /*!
  * All of the device components that deals with interfacing to a users head.
  *
@@ -154,16 +149,7 @@ struct xrt_hmd_parts
 
 		//! distortion is subject to the field of view
 		struct xrt_fov fov[XRT_MAX_VIEWS];
-
-		// temporary, for modifying the distortion mesh at runtime (dirty)
-		struct vk_bundle* dist_vk_bundle;
-		struct render_resources* resources;
-		struct render_buffer* vbo;
-
-
 	} distortion;
-	// dirty stuff
-	bool (*dist_update)(struct xrt_device* xdev);
 };
 
 /*!
