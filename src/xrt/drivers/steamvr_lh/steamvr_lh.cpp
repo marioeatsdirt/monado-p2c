@@ -746,7 +746,7 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
 	u_logging_level level = debug_get_log_option_lh_log();
 
 	// some devices get reset during init, so that should be completed before the lighthouse driver gets loaded
-	struct fixup_context* fixup_ctx;
+	struct fixup_context *fixup_ctx;
 	fixup_ctx = fixup_init_devices();
 
 	// The driver likes to create a bunch of transient folders -
@@ -863,7 +863,7 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
 	}
 
 	fixup_patch_devices(fixup_ctx, xsysd);
-	//head = xsysd->static_roles.head;	// seems to work without
+	// head = xsysd->static_roles.head;	// seems to work without
 
 	u_device_assign_xdev_roles(xsysd->xdevs, xsysd->xdev_count, &svrs->head_index, &svrs->left_index,
 	                           &svrs->right_index);
