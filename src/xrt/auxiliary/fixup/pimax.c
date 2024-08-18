@@ -403,7 +403,7 @@ bool pimax_compute_distortion_from_mesh(
 
 void pimax_8kx_poll(struct pimax_device* dev){
     //U_LOG_D("Pimax poll");
-    bool update_distortion = dev->always_update_distortion;
+    //bool update_distortion = dev->always_update_distortion;
     os_mutex_lock(&dev->hid_mutex);
     if(!dev->hid_dev){
         U_LOG_E("Pimax HID device not available");
@@ -430,7 +430,7 @@ void pimax_8kx_poll(struct pimax_device* dev){
         dev->device_config.separation = pimax_8kx_lens_separation_from_raw(*(uint16_t*)(&buf[4]));
         U_LOG_D("IPD Set to %f", dev->device_config.ipd);
         U_LOG_D("Separation Set to %f", dev->device_config.separation);
-        update_distortion = true;
+        //update_distortion = true;
     }
 
     if(dev->polls_since_last_keepalive > PIMAX_POLL_KEEPALIVE_WAIT_COUNT){
